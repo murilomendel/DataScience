@@ -1,0 +1,468 @@
+---
+output:
+  pdf_document:
+    number_sections: yes
+    latex_engine: pdflatex
+  bibliography: references.bib
+title: "PH125.9x - Capstone: House Prices"
+runhead: "House Prices Project"
+author: "Murilo Mendel Costa"
+github: "murilomendel"
+
+abstract: "This project aim to predict the price of a house based it location, size, built year and other 76 features. This report will cover the process of loading the dataset, apply feature engineering methods and fit a model to predict the price of a house based on it characteristics. The dataset was obtained on Kaggle platform, and this content is available for knowledge improvement purpouse. \\par
+ \\textbf{Keywords:} house prices, predition, harvardX, capstone, r markdown"
+
+geometry: margin = 1in
+fontawesome: yes
+fontfamily: mathpazo
+fontfamilyoptions: sc, osf
+fontsize: 11pt
+biblio-style: apsr
+linkcolor: gray
+urlcolor: gray
+---
+***
+
+# Introduction
+
+House Prices is a Kaggle competition for knowledge improvement purpose which the main challenge is to develop a predictive model capable to estimate a house price based on it own characteristics. The data set was extracted from the competition web page (<https://www.kaggle.com/c/house-prices-advanced-regression-techniques/>) and has 79 features to be explored in order to reach the best predictive model.
+
+The train and test data set are composed by houses from Ames, Iowa and many of their characteristics.The Ames Housing dataset was compiled by Dean De Cock for use in data science education. 
+
+**The project approach** is to make a feature engineering on the available data and build a model to predict a house price using features from the train set that most minimizes the loss function when applied to the validation set. A residual mean squared error (`RMSE`) was used as the loss function (the typical error we make when predicting a movie rating) for performance measure.
+
+
+
+# Methodology
+
+As the first step, we import the Ames House data set from the previous downloaded file on Kaggle web page. Once we had a train set, we analyzed some of its properties through descriptive statistics and histograms, in order to gain insights for the prediction model. Then, we looked for opportunities to fit the data and select the best predictors in order to train different models and evaluate each of them to reach the best approach.
+
+Finally, the model was built using 25 most relevant features `House Price` set.
+
+## Data extraction
+
+```{r, message = F, warning = F}
+# Import libraries
+library(tidyverse)
+library(caret)
+library(data.table)
+library(ggplot2)
+library(knitr)
+library(stringr)
+library(readr)
+library(rpart)
+library(leaps)
+library(corrplot)
+library(randomForest)
+
+# The data was downloaded from: https://www.kaggle.com/c/house-prices-advanced-regression-techniques/
+# The downloaded file is stored in the project current directory, inside the \data folder
+
+# Read the train and test .csv file
+# Read the train and test .csv file
+HP <- as.data.frame(read_csv(file.path(getwd(),"/data/train.csv"), col_names = TRUE))
+```
+
+## Data description
+
+The `Ames House Price` train set contains `1312` rows and `81` columns, each variable meaning:
+> SalePrice - the property's sale price in dollars. This is the target variable that you're trying to predict.
+
+> MSSubClass: The building class
+
+> MSZoning: The general zoning classification
+
+> LotFrontage: Linear feet of street connected to property
+
+> LotArea: Lot size in square feet
+
+> Street: Type of road access
+
+> Alley: Type of alley access
+
+> LotShape: General shape of property
+
+> LandContour: Flatness of the property
+
+> Utilities: Type of utilities available
+
+> LotConfig: Lot configuration
+
+> LandSlope: Slope of property
+
+> Neighborhood: Physical locations within Ames city limits
+
+> Condition1: Proximity to main road or railroad
+
+> Condition2: Proximity to main road or railroad (if a second is present)
+
+> BldgType: Type of dwelling
+
+> HouseStyle: Style of dwelling
+
+> OverallQual: Overall material and finish quality
+
+> OverallCond: Overall condition rating
+
+> YearBuilt: Original construction date
+
+> YearRemodAdd: Remodel date
+
+> RoofStyle: Type of roof
+
+> RoofMatl: Roof material
+
+> Exterior1st: Exterior covering on house
+
+> Exterior2nd: Exterior covering on house (if more than one material)
+
+> MasVnrType: Masonry veneer type
+
+> MasVnrArea: Masonry veneer area in square feet
+
+> ExterQual: Exterior material quality
+
+> ExterCond: Present condition of the material on the exterior
+
+> Foundation: Type of foundation
+
+> BsmtQual: Height of the basement
+
+> BsmtCond: General condition of the basement
+
+> BsmtExposure: Walkout or garden level basement walls
+
+> BsmtFinType1: Quality of basement finished area
+
+> BsmtFinSF1: Type 1 finished square feet
+
+> BsmtFinType2: Quality of second finished area (if present)
+
+> BsmtFinSF2: Type 2 finished square feet
+
+> BsmtUnfSF: Unfinished square feet of basement area
+
+> TotalBsmtSF: Total square feet of basement area
+
+> Heating: Type of heating
+
+> HeatingQC: Heating quality and condition
+
+> CentralAir: Central air conditioning
+
+> Electrical: Electrical system
+
+> 1stFlrSF: First Floor square feet
+
+> 2ndFlrSF: Second floor square feet
+
+> LowQualFinSF: Low quality finished square feet (all floors)
+
+> GrLivArea: Above grade (ground) living area square feet
+
+> BsmtFullBath: Basement full bathrooms
+
+> BsmtHalfBath: Basement half bathrooms
+
+> FullBath: Full bathrooms above grade
+
+> HalfBath: Half baths above grade
+
+> Bedroom: Number of bedrooms above basement level
+
+> Kitchen: Number of kitchens
+
+> KitchenQual: Kitchen quality
+
+> TotRmsAbvGrd: Total rooms above grade (does not include bathrooms)
+
+> Functional: Home functionality rating
+
+> Fireplaces: Number of fireplaces
+
+> FireplaceQu: Fireplace quality
+
+> GarageType: Garage location
+
+> GarageYrBlt: Year garage was built
+
+> GarageFinish: Interior finish of the garage
+
+> GarageCars: Size of garage in car capacity
+
+> GarageArea: Size of garage in square feet
+
+> GarageQual: Garage quality
+
+> GarageCond: Garage condition
+
+> PavedDrive: Paved driveway
+
+> WoodDeckSF: Wood deck area in square feet
+
+> OpenPorchSF: Open porch area in square feet
+
+> EnclosedPorch: Enclosed porch area in square feet
+
+> 3SsnPorch: Three season porch area in square feet
+
+> ScreenPorch: Screen porch area in square feet
+
+> PoolArea: Pool area in square feet
+
+> PoolQC: Pool quality
+
+> Fence: Fence quality
+
+> MiscFeature: Miscellaneous feature not covered in other categories
+
+> MiscVal: $Value of miscellaneous feature
+
+> MoSold: Month Sold
+
+> YrSold: Year Sold
+
+> SaleType: Type of sale
+
+> SaleCondition: Condition of sale
+
+We can analyze the data set using some descriptive statistics.
+
+```{r, message = F, warning = F}
+dim(HP)
+```
+
+```{r, message = F, warning = F}
+summary(HP)
+```
+
+```{r, message = F, warning = F}
+head(HP)
+```
+
+The first step is removing features with much NAs values. The cut point is over 40% of the data composed by NA.
+
+```{r, message = F, warning = F}
+# Dealing with features with high null ratio
+missing_rows <- HP[!complete.cases(HP),]
+nrow(missing_rows) # At first, there are 1460 missing rows
+
+# Checking the quantity of NULL values for each column, and remove columns with more than 40% NULL values
+for(col in colnames(HP)){
+  null_percent = length(which(is.na(HP[[col]]))) / length(HP[[col]])
+  if(null_percent > 0.4){
+    HP[[col]] <- NULL
+  }
+}
+
+# After the first clean, there are still 366 missing rows
+missing_rows <- HP[!complete.cases(HP),]
+nrow(missing_rows)
+rm(missing_rows)
+```
+
+The next step is completing the missing information. First, we need to know the columns which has NAs values.
+
+```{r, message = F, warning = F}
+# Dealing with null values
+# Summary of NAs per columns
+NAcol <- which(colSums(is.na(HP)) > 0)
+sort(colSums(sapply(HP[NAcol], is.na)), decreasing = TRUE)
+```
+
+The first columns to be filled is the 'LotFrontage', which is related to the linear feet of street connected to property. To fill this values, we look for the mean value over the neighborhoods.
+
+```{r, message = F, warning = F}
+# LotFrontaage Variable = 259 NAs
+sum(is.na(HP$LotFrontage))
+
+# Plotting the variable over the Neighborhoods possibilities
+ggplot(HP[!is.na(HP$LotFrontage),], aes(x=as.factor(Neighborhood), y=LotFrontage)) +
+  geom_bar(stat='summary', fun.y = "median", fill='blue') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Complete the NAs with the median of it neighborhood
+for (i in 1:nrow(HP)){
+  if(is.na(HP$LotFrontage[i])){
+    HP$LotFrontage[i] <- as.integer(median(HP$LotFrontage[HP$Neighborhood==HP$Neighborhood[i]], na.rm=TRUE)) 
+  }
+}
+```
+
+The next columns to be filled is the GarageType. In this case, the garage type with no value will be filled with 'No Garage' information
+
+```{r, message = F, warning = F}
+# Garage Type Variable = 81 NAs
+HP$GarageType[is.na(HP$GarageType)] <- 'No Garage'
+HP$GarageFinish[is.na(HP$GarageFinish)] <- 'None'
+HP$GarageQual[is.na(HP$GarageQual)] <- 'None'
+HP$GarageCond[is.na(HP$GarageCond)] <- 'None'
+HP$GarageYrBlt[is.na(HP$GarageYrBlt)] <- HP$YearBuilt[is.na(HP$GarageYrBlt)]
+
+```
+
+All other garage variable have the same NAs values, probably caused by the fact that these rows are related to houses that ha no garage.
+
+Basement Variables has almost the same quantity of NAs values, related probably to the same houses. Looking for rows with only one NA to ensure the remaining are related to the same houses.
+
+```{r, message = F, warning = F}
+# Basement Variables = 37 NAs
+HP[!is.na(HP$BsmtExposure) & (is.na(HP$BsmtFinType2)|is.na(HP$BsmtQual)|is.na(HP$BsmtCond)|is.na(HP$BsmtFinType1)), c('BsmtExposure', 'BsmtFinType1', 'BsmtQual', 'BsmtCond', 'BsmtFinType2')]
+HP$BsmtFinType2[333] <- names(sort(-table(HP$BsmtFinType2)))[1]
+
+HP$BsmtExposure[is.na(HP$BsmtExposure)] <- 'None'
+HP$BsmtQual[is.na(HP$BsmtQual)] <- 'None'
+HP$BsmtCond[is.na(HP$BsmtCond)] <- 'None'
+HP$BsmtFinType1[is.na(HP$BsmtFinType1)] <- 'None'
+HP$BsmtFinType2[is.na(HP$BsmtFinType2)] <- 'None'
+```
+
+Finishing, we fill the Masonery and Electrical features
+
+```{r, message = F, warning = F}
+# Masonry veneer features = 8 NAs
+HP$MasVnrType[is.na(HP$MasVnrType)] <- 'None'
+HP$MasVnrArea[is.na(HP$MasVnrArea)] <-0
+
+# Electrical Information = 1 NA
+HP$Electrical[is.na(HP$Electrical)] <- names(sort(-table(HP$Electrical)))[1]
+```
+
+The next step, we will have a first look to the numerical data and select the most relevant ones based on the correlation between SalePrice feature.
+
+```{r, message = F, warning = F}
+HP.numerical <- HP[sapply(HP, is.numeric)]
+
+# Numerical features first look
+# Calculating features correlation
+numericalFeatures.correlation <- cor(HP.numerical, use = "pairwise.complete.obs")
+
+corrplot(numericalFeatures.correlation, tl.col="black", tl.pos = "lt")
+```
+
+Another step is to have a first look and choose the most important ones:
+
+```{r, message = F, warning = F}
+HP.categorical <- HP[sapply(HP, is.character)]
+
+# Categorical feature first look
+set.seed(1)
+quick_RF <- randomForest(x=HP.categorical[1:1460,-76], y=HP.categorical$SalePrice[1:1460], ntree=100,importance=TRUE)
+imp_RF <- importance(quick_RF)
+imp_DF <- data.frame(Variables = row.names(imp_RF), MSE = imp_RF[,1])
+imp_DF <- imp_DF[order(imp_DF$MSE, decreasing = TRUE),]
+
+# Features with most importance
+ggplot(imp_DF[1:20,], aes(x=reorder(Variables, MSE), y=MSE, fill=MSE)) + geom_bar(stat = 'identity') + labs(x = 'Variables', y= '% increase MSE if variable is randomly permuted') + coord_flip() + theme(legend.position="none")
+```
+
+From these two studies, we select the most important features and convert the categorical features to numeric(factor) to start modelling
+
+```{r, message = F, warning = F}
+# From these plots, we can select the numerical features with high correlation to the target variable 
+selected_var <- c('LotFrontage','LotArea', 'OverallQual','YearBuilt','MasVnrArea',
+                  'TotalBsmtSF','1stFlrSF','GrLivArea','FullBath','TotRmsAbvGrd',
+                  'Fireplaces','GarageCars','GarageArea','Foundation','BsmtQual',
+                  'ExterQual','KitchenQual','Exterior2nd','GarageType','Exterior1st',
+                  'Neighborhood','HeatingQC','GarageFinish','BsmtFinType1','MSZoning',
+                  'SalePrice')
+
+HP <- HP[,selected_var]
+
+HP[sapply(HP, is.character)] <- lapply(HP[sapply(HP, is.character)], as.factor)
+HP[sapply(HP, is.factor)] <- lapply(HP[sapply(HP, is.factor)], as.numeric)
+```
+
+## Modeling
+
+```{r, message = F, warning = F}
+# Validation set will be 10% of train data
+set.seed(1, sample.kind = "Rounding")
+validation_index <- createDataPartition(y = HP$SalePrice,
+                                        times = 1,
+                                        p = 0.1,
+                                        list = F)
+
+HP.validation <- HP[validation_index,]
+HP.train <- HP[-validation_index,]
+
+rm(validation_index)
+```
+
+Now we make some approaches to reach the best one to predict sales from the selected variables.
+
+The first approach is a naive approach, predicting Sales Price as the mean of all houses in the dataset.
+
+```{r, message = F, warning = F}
+mean(HP$SalePrice) # Mean Sale Price is $180,921.2
+sd(HP$SalePrice) # Standard Deviation is $79,442.5
+
+mu <- mean(HP$SalePrice)
+
+naive.rmse = RMSE(HP.validation$SalePrice, mu)
+rmse.results <- tibble(Model = "01. Mean Sale Price Approach(Naive)",
+                       RMSE = naive.rmse)
+kable(rmse.results)
+```
+
+Second approach is a linear model fit.
+
+```{r, message = F, warning = F}
+# Linear Regression Fitting
+linearRegression.fit <- lm(SalePrice ~ ., data = HP.train)
+
+linearRegression.predict <- predict(linearRegression.fit, newdata = HP.validation)
+linearRegression.rmse <- RMSE(linearRegression.predict, HP.validation$SalePrice)
+
+rmse.results <- rmse.results %>%
+  bind_rows(tibble(Model = "02. Linear Regression",
+                   RMSE = linearRegression.rmse))
+kable(rmse.results)
+```
+
+Fitting a decision tree model:
+
+```{r, message = F, warning = F}
+decisionTree.fit <- rpart(SalePrice~.,
+                          data = HP.train,
+                          control = rpart.control(cp = 0.01))
+
+plotcp(decisionTree.fit)
+
+decisionTree.predict <- predict(decisionTree.fit,
+                                newdata = HP.validation)
+
+decisionTree.rmse <- RMSE(decisionTree.predict, HP.validation$SalePrice)
+
+rmse.results <- rmse.results %>%
+  bind_rows(tibble(Model = "03. Decision Tree",
+                   RMSE = decisionTree.rmse))
+kable(rmse.results)
+```
+
+The last approach involves a Lasso regression:
+
+```{r, message = F, warning = F}
+set.seed(27)
+lasso.fit <- train(x = HP.train[,-26], y = HP.train$SalePrice,
+                   method ='glmnet',
+                   trControl = trainControl(method="cv", number=5),
+                   tuneGrid = expand.grid(alpha = 1, lambda = seq(0.001,0.1,by = 0.0005))) 
+lasso.fit$bestTune
+lasso.rmse <- min(lasso.fit$results$RMSE)
+
+rmse.results <- rmse.results %>%
+  bind_rows(tibble(Model = "04. Lasso Regression",
+                   RMSE = lasso.rmse))
+kable(rmse.results)
+```
+
+# Conclusion
+
+The predictive model with the most accurate approach is the linear model.
+
+Other approaches, involving more complex methods, or a combination of different models could reach better results, but the RMSE achieved is a good start point, and make the model really useful.
+
+```{r}
+sessionInfo()
+```

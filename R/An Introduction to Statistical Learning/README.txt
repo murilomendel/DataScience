@@ -1,0 +1,1 @@
+This folder contain scripts created during the study of the book: An Introduction to Statistical Learning.
