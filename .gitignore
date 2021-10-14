@@ -6,5 +6,6 @@
 *.csv
 data
 input
+output
 *.zip
 .Rproj.user
