@@ -8,4 +8,6 @@ data
 input
 output
 *.zip
+*.pdf
+docs
 .Rproj.user
